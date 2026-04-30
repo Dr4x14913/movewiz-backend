@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Movewiz Test Client</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: Arial, sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; background: #f5f5f5; }
+        h1 { color: #1c8046; margin-bottom: 20px; }
+        h2 { color: #27AE60; margin: 20px 0 10px; border-bottom: 2px solid #27AE60; padding-bottom: 5px; }
+        .section { background: #fff; padding: 20px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        label { display: block; margin: 10px 0 5px; font-weight: bold; }
+        input, textarea, select { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 5px; }
+        textarea { min-height: 60px; }
+        button { background: #1c8046; color: #fff; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; margin: 5px 0; }
+        button:hover { background: #155d35; }
+        .output { background: #f9f9f9; border: 1px solid #ddd; padding: 10px; margin-top: 10px; border-radius: 4px; white-space: pre-wrap; font-size: 13px; max-height: 300px; overflow-y: auto; }
+        .urls { margin: 10px 0; }
+        .urls a { display: block; color: #27AE60; margin: 3px 0; }
+        #captcha-img { display: block; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h1>Movewiz Test Client</h1>
+    <label>API Endpoint</label>
+    <input id="api-endpoint" value="http://localhost:3033" style="max-width: 400px;">
+
+    <!-- Create Event -->
+    <div class="section">
+        <h2>Create Event</h2>
+        <label>First Name</label><input id="create-firstName" value="John">
+        <label>Last Name</label><input id="create-lastName" value="Doe">
+        <label>Email</label><input id="create-email" value="john@example.com">
+        <label>Event Name</label><input id="create-eventName" value="Test Event">
+        <label>Date</label><input id="create-datePicker" value="2025-05-01">
+        <label>Address</label><input id="create-address" value="123 Test St">
+        <label>Latitude</label><input id="create-latitude" type="number" step="any" value="48.8566">
+        <label>Longitude</label><input id="create-longitude" type="number" step="any" value="2.3522">
+        <label>Comments</label><textarea id="create-comments">Test comments</textarea>
+        <button onclick="createNewEvent()">Create Event</button>
+        <span style="font-size:12px;color:#666;">POST /api/createEvent</span>
+        <div class="urls" id="event-urls"></div>
+        <div class="output" id="create-output"></div>
+    </div>
+
+    <!-- Get Event -->
+    <div class="section">
+        <h2>Get Event</h2>
+        <button onclick="getEvent('read')">Get by Read Token</button>
+        <span style="font-size:12px;color:#666;">GET /api/getEvent?token=...&isEdit=false</span>
+        <button onclick="getEvent('edit')">Get by Edit Token</button>
+        <span style="font-size:12px;color:#666;">GET /api/getEvent?token=...&isEdit=true</span>
+        <div class="output" id="getevent-output"></div>
+    </div>
+
+    <!-- Edit Event -->
+    <div class="section">
+        <h2>Edit Event</h2>
+        <label>Event Name</label><input id="edit-eventName" value="Updated Event Name">
+        <button onclick="editEvent()">Update Event</button>
+        <span style="font-size:12px;color:#666;">POST /api/editEvent</span>
+        <div class="output" id="editevent-output"></div>
+    </div>
+
+    <!-- Register Participant -->
+    <div class="section">
+        <h2>Register Participant</h2>
+        <label>First Name</label><input id="reg-firstName" value="Jane">
+        <label>Last Name</label><input id="reg-lastName" value="Smith">
+        <label>Email</label><input id="reg-email" value="jane@example.com">
+        <label>Mode</label><input id="reg-mode" value="walking">
+        <label>Show Email</label><select id="reg-showEmail"><option value="true">true</option><option value="false">false</option></select>
+        <label>Registration Date</label><input id="reg-registrationDate" value="2025-05-01">
+        <label>Latitude</label><input id="reg-latitude" type="number" step="any" value="48.8600">
+        <label>Longitude</label><input id="reg-longitude" type="number" step="any" value="2.3600">
+        <label>Comments</label><textarea id="reg-comments">Interested!</textarea>
+        <label>Phone</label><input id="reg-phoneNumber" value="+33612345678">
+        <label>Notify Me</label><select id="reg-notifyMe"><option value="true">true</option><option value="false">false</option></select>
+        <button onclick="registerParticipant()">Register</button>
+        <span style="font-size:12px;color:#666;">POST /api/registerParticipant</span>
+        <div class="output" id="register-output"></div>
+    </div>
+
+    <!-- Get Participants -->
+    <div class="section">
+        <h2>Get Participants</h2>
+        <button onclick="getParticipants()">Fetch Participants</button>
+        <span style="font-size:12px;color:#666;">GET /api/getParticipants?token=...</span>
+        <div class="output" id="participants-output"></div>
+    </div>
+
+    <!-- Contact Participant -->
+    <div class="section">
+        <h2>Contact Participant</h2>
+        <label>Your Email</label><input id="contact-senderEmail" value="me@example.com">
+        <label>Message</label><textarea id="contact-message">Hello, is the event still on?</textarea>
+        <label>Captcha</label>
+        <img id="captcha-img" src="" alt="captcha" onclick="loadCaptcha()">
+        <span style="font-size:12px;color:#666;">GET /generate-captcha</span>
+        <br><button onclick="loadCaptcha()">Refresh Captcha</button>
+        <label>Captcha Answer</label><input id="contact-answer">
+        <button onclick="contactParticipant()">Send Message</button>
+        <span style="font-size:12px;color:#666;">POST /api/contactParticipant</span>
+        <div class="output" id="contact-output"></div>
+    </div>
+
+    <script>
+        function getAPI() { return document.getElementById('api-endpoint').value.replace(/\/+$/, ''); }
+        let readToken = '';
+        let editToken = '';
+
+        async function api(method, path, body) {
+            const opts = { method, headers: { 'Content-Type': 'application/json' } };
+            if (body) opts.body = JSON.stringify(body);
+            try {
+                const res = await fetch(getAPI() + path, opts);
+                const data = await res.json().catch(() => ({ error: 'Invalid JSON response' }));
+                return { status: res.status, data, ok: res.ok };
+            } catch (e) {
+                return { status: 0, data: { error: e.message }, ok: false };
+            }
+        }
+
+        function out(id, text) { document.getElementById(id).textContent = JSON.stringify(text, null, 2); }
+
+        async function createNewEvent() {
+            const outputEl = document.getElementById('create-output');
+            outputEl.textContent = 'Sending...';
+            console.log('createEvent called');
+            const body = {
+                firstName: document.getElementById('create-firstName').value,
+                lastName: document.getElementById('create-lastName').value,
+                email: document.getElementById('create-email').value,
+                eventName: document.getElementById('create-eventName').value,
+                datePicker: document.getElementById('create-datePicker').value,
+                address: document.getElementById('create-address').value,
+                latitude: parseFloat(document.getElementById('create-latitude').value),
+                longitude: parseFloat(document.getElementById('create-longitude').value),
+                comments: document.getElementById('create-comments').value,
+            };
+            console.log('body:', body);
+            try {
+                const res = await fetch(getAPI() + '/api/createEvent', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                console.log('response:', res.status, res.statusText);
+                const data = await res.json();
+                outputEl.textContent = JSON.stringify({ status: res.status, data }, null, 2);
+                if (res.ok && data.readUrl) {
+                    readToken = new URL(data.readUrl).searchParams.get('token');
+                    editToken = new URL(data.writeUrl).searchParams.get('token');
+                    document.getElementById('event-urls').innerHTML =
+                        `<a href="${data.readUrl}" target="_blank">Read URL</a><a href="${data.writeUrl}" target="_blank">Write URL</a>`;
+                }
+            } catch (e) {
+                console.error('error:', e);
+                outputEl.textContent = 'Error: ' + e.message;
+            }
+        }
+
+        async function getEvent(type) {
+            const token = type === 'read' ? readToken : editToken;
+            if (!token) return out('getevent-output', 'Create an event first');
+            const r = await api('GET', `/api/getEvent?token=${token}&isEdit=${type === 'edit'}`);
+            out('getevent-output', r.data);
+        }
+
+        async function editEvent() {
+            if (!editToken) return out('editevent-output', 'Create an event first');
+            const body = {
+                editToken: editToken,
+                eventName: document.getElementById('edit-eventName').value,
+            };
+            const r = await api('POST', '/api/editEvent', body);
+            out('editevent-output', r.data);
+        }
+
+        async function registerParticipant() {
+            if (!readToken) return out('register-output', 'Create an event first');
+            const body = {
+                firstName: document.getElementById('reg-firstName').value,
+                lastName: document.getElementById('reg-lastName').value,
+                email: document.getElementById('reg-email').value,
+                mode: document.getElementById('reg-mode').value,
+                showEmail: document.getElementById('reg-showEmail').value === 'true',
+                token: readToken,
+                registrationDate: document.getElementById('reg-registrationDate').value,
+                latitude: parseFloat(document.getElementById('reg-latitude').value),
+                longitude: parseFloat(document.getElementById('reg-longitude').value),
+                comments: document.getElementById('reg-comments').value,
+                phoneNumber: document.getElementById('reg-phoneNumber').value,
+                notifyMe: document.getElementById('reg-notifyMe').value === 'true',
+            };
+            const r = await api('POST', '/api/registerParticipant', body);
+            out('register-output', r.data);
+        }
+
+        async function getParticipants() {
+            if (!readToken) return out('participants-output', 'Create an event first');
+            const r = await api('GET', `/api/getParticipants?token=${readToken}`);
+            out('participants-output', r.data);
+        }
+
+        function loadCaptcha() {
+            document.getElementById('captcha-img').src = getAPI() + '/generate-captcha?' + Date.now();
+        }
+
+        async function contactParticipant() {
+            const participants = JSON.parse(document.getElementById('participants-output').textContent);
+            const participant = participants?.[0];
+            if (!participant?.contactToken) return out('contact-output', 'Register a participant first');
+            const body = {
+                contactToken: participant.contactToken,
+                answer: document.getElementById('contact-answer').value,
+                senderEmail: document.getElementById('contact-senderEmail').value,
+                message: document.getElementById('contact-message').value,
+                eventName: 'Test Event',
+            };
+            const r = await api('POST', '/api/contactParticipant', body);
+            out('contact-output', r.data);
+        }
+
+        // Load captcha on start
+        loadCaptcha();
+    </script>
+</body>
+</html>
