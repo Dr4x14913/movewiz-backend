@@ -2,7 +2,6 @@ import os
 
 
 class Config:
-    SESSION_SECRET = os.environ.get('SESSION_SECRET', 'dev-secret')
     IS_SECURE = os.environ.get('IS_SECURE', 'false').lower() == 'true'
 
     # Database
@@ -16,11 +15,6 @@ class Config:
         f"mysql+pymysql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-
-    # Session
-    SESSION_TYPE = 'filesystem'
-    SESSION_COOKIE_SECURE = IS_SECURE
-    SESSION_COOKIE_SAMESITE = 'Lax'
 
     # Rate limiting - no default, only apply to specific endpoints
     RATELIMIT_DEFAULT = None
