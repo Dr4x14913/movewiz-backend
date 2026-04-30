@@ -20,6 +20,7 @@ class Config:
     # Session
     SESSION_TYPE = 'filesystem'
     SESSION_COOKIE_SECURE = IS_SECURE
+    SESSION_COOKIE_SAMESITE = 'Lax'
 
     # Rate limiting - no default, only apply to specific endpoints
     RATELIMIT_DEFAULT = None

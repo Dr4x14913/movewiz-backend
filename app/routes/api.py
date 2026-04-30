@@ -1,15 +1,16 @@
 import uuid
-from io import BytesIO
+import base64
 
-from flask import Blueprint, request, jsonify, session, send_file
+from flask import Blueprint, request, jsonify
 from ..extensions import db, limiter
 from ..models import Event, Participant
-from ..services import send_email, notify_all, generate_captcha
+from ..services import send_email, notify_all, generate_captcha, store_captcha, verify_captcha
 
 api_bp = Blueprint('api', __name__)
 
 
 @api_bp.route('/api/createEvent', methods=['POST'])
+@limiter.limit("3 per 15 minutes")
 def create_event():
     data = request.get_json()
     first_name = data.get('firstName')
@@ -21,6 +22,11 @@ def create_event():
     latitude = data.get('latitude')
     longitude = data.get('longitude')
     comments = data.get('comments')
+    answer = data.get('answer')
+    captcha_token = data.get('captchaToken')
+
+    if not verify_captcha(captcha_token, answer):
+        return jsonify({'error': 'Invalid captcha'}), 401
 
     read_token = str(uuid.uuid4())
     edit_token = str(uuid.uuid4())
@@ -196,12 +202,12 @@ def contact_participant():
     data = request.get_json()
     contact_token = data.get('contactToken')
     answer = data.get('answer')
+    captcha_token = data.get('captchaToken')
     sender_email = data.get('senderEmail')
     message = data.get('message')
     event_name = data.get('eventName')
 
-    # Verify captcha
-    if session.get('captcha') != answer:
+    if not verify_captcha(captcha_token, answer):
         return jsonify({'error': 'Invalid captcha'}), 401
 
     participant = Participant.query.filter_by(contactToken=contact_token).first()
@@ -212,15 +218,12 @@ def contact_participant():
     html = render_template('contact.html', senderEmail=sender_email, message=message)
     send_email(participant.email, f"[Movewiz] Contact from event {event_name}", html)
 
-    # Clear captcha from session
-    session.pop('captcha', None)
-
     return jsonify({'success': True})
 
 
 @api_bp.route('/generate-captcha', methods=['GET'])
 def captcha():
     captcha_image, captcha_text = generate_captcha()
-    session['captcha'] = captcha_text
-    captcha_image.seek(0)
-    return send_file(captcha_image, mimetype='image/png')
+    token = store_captcha(captcha_text)
+    image_base64 = base64.b64encode(captcha_image.getvalue()).decode()
+    return jsonify({'token': token, 'image': image_base64})

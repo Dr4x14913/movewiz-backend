@@ -38,6 +38,10 @@
         <label>Latitude</label><input id="create-latitude" type="number" step="any" value="48.8566">
         <label>Longitude</label><input id="create-longitude" type="number" step="any" value="2.3522">
         <label>Comments</label><textarea id="create-comments">Test comments</textarea>
+        <label>Captcha</label>
+        <img id="create-captcha-img" src="" alt="captcha" onclick="loadCreateCaptcha()">
+        <br><button onclick="loadCreateCaptcha()">Refresh Captcha</button>
+        <label>Captcha Answer</label><input id="create-answer">
         <button onclick="createNewEvent()">Create Event</button>
         <span style="font-size:12px;color:#666;">POST /api/createEvent</span>
         <div class="urls" id="event-urls"></div>
@@ -93,6 +97,7 @@
     <!-- Contact Participant -->
     <div class="section">
         <h2>Contact Participant</h2>
+        <label>Contact Token</label><input id="contact-contactToken" placeholder="Paste participant contactToken here">
         <label>Your Email</label><input id="contact-senderEmail" value="me@example.com">
         <label>Message</label><textarea id="contact-message">Hello, is the event still on?</textarea>
         <label>Captcha</label>
@@ -127,7 +132,7 @@
         async function createNewEvent() {
             const outputEl = document.getElementById('create-output');
             outputEl.textContent = 'Sending...';
-            console.log('createEvent called');
+            if (!createCaptchaToken) return outputEl.textContent = 'Load captcha first';
             const body = {
                 firstName: document.getElementById('create-firstName').value,
                 lastName: document.getElementById('create-lastName').value,
@@ -138,15 +143,15 @@
                 latitude: parseFloat(document.getElementById('create-latitude').value),
                 longitude: parseFloat(document.getElementById('create-longitude').value),
                 comments: document.getElementById('create-comments').value,
+                captchaToken: createCaptchaToken,
+                answer: document.getElementById('create-answer').value,
             };
-            console.log('body:', body);
             try {
                 const res = await fetch(getAPI() + '/api/createEvent', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(body)
                 });
-                console.log('response:', res.status, res.statusText);
                 const data = await res.json();
                 outputEl.textContent = JSON.stringify({ status: res.status, data }, null, 2);
                 if (res.ok && data.readUrl) {
@@ -156,7 +161,6 @@
                         `<a href="${data.readUrl}" target="_blank">Read URL</a><a href="${data.writeUrl}" target="_blank">Write URL</a>`;
                 }
             } catch (e) {
-                console.error('error:', e);
                 outputEl.textContent = 'Error: ' + e.message;
             }
         }
@@ -204,16 +208,38 @@
             out('participants-output', r.data);
         }
 
-        function loadCaptcha() {
-            document.getElementById('captcha-img').src = getAPI() + '/generate-captcha?' + Date.now();
+        let contactCaptchaToken = '';
+        let createCaptchaToken = '';
+
+        async function loadCaptcha() {
+            try {
+                const res = await fetch(getAPI() + '/generate-captcha');
+                const data = await res.json();
+                contactCaptchaToken = data.token;
+                document.getElementById('captcha-img').src = 'data:image/png;base64,' + data.image;
+            } catch (e) {
+                console.error('Failed to load captcha:', e);
+            }
+        }
+
+        async function loadCreateCaptcha() {
+            try {
+                const res = await fetch(getAPI() + '/generate-captcha');
+                const data = await res.json();
+                createCaptchaToken = data.token;
+                document.getElementById('create-captcha-img').src = 'data:image/png;base64,' + data.image;
+            } catch (e) {
+                console.error('Failed to load captcha:', e);
+            }
         }
 
         async function contactParticipant() {
-            const participants = JSON.parse(document.getElementById('participants-output').textContent);
-            const participant = participants?.[0];
-            if (!participant?.contactToken) return out('contact-output', 'Register a participant first');
+            const contactToken = document.getElementById('contact-contactToken').value.trim();
+            if (!contactToken) return out('contact-output', 'Enter a contact token');
+            if (!contactCaptchaToken) return out('contact-output', 'Load captcha first');
             const body = {
-                contactToken: participant.contactToken,
+                contactToken: contactToken,
+                captchaToken: contactCaptchaToken,
                 answer: document.getElementById('contact-answer').value,
                 senderEmail: document.getElementById('contact-senderEmail').value,
                 message: document.getElementById('contact-message').value,
@@ -223,8 +249,9 @@
             out('contact-output', r.data);
         }
 
-        // Load captcha on start
+        // Load captchas on start
         loadCaptcha();
+        loadCreateCaptcha();
     </script>
 </body>
 </html>
