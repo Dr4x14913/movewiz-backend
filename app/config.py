@@ -2,8 +2,6 @@ import os
 
 
 class Config:
-    IS_SECURE = os.environ.get('IS_SECURE', 'false').lower() == 'true'
-
     # Database
     DB_HOST = os.environ.get('DB_HOST', 'localhost')
     DB_PORT = os.environ.get('DB_PORT', '3306')

@@ -25,6 +25,8 @@
     <h1>Movewiz Test Client</h1>
     <label>API Endpoint</label>
     <input id="api-endpoint" value="http://localhost:3033" style="max-width: 400px;">
+    <label>Frontend Origin</label>
+    <input id="frontend-origin" value="http://localhost:3000" style="max-width: 400px;">
 
     <!-- Create Event -->
     <div class="section">
@@ -145,6 +147,7 @@
                 comments: document.getElementById('create-comments').value,
                 captchaToken: createCaptchaToken,
                 answer: document.getElementById('create-answer').value,
+                frontendOrigin: document.getElementById('frontend-origin').value.replace(/\/+$/, ''),
             };
             try {
                 const res = await fetch(getAPI() + '/api/createEvent', {
@@ -197,6 +200,7 @@
                 comments: document.getElementById('reg-comments').value,
                 phoneNumber: document.getElementById('reg-phoneNumber').value,
                 notifyMe: document.getElementById('reg-notifyMe').value === 'true',
+                frontendOrigin: document.getElementById('frontend-origin').value.replace(/\/+$/, ''),
             };
             const r = await api('POST', '/api/registerParticipant', body);
             out('register-output', r.data);

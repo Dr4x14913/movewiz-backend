@@ -47,11 +47,10 @@ def create_event():
     db.session.add(event)
     db.session.commit()
 
-    # Construct URLs
-    host = request.host
-    protocol = request.scheme
-    read_url = f"{protocol}://{host}/event?token={read_token}"
-    write_url = f"{protocol}://{host}/edit?token={edit_token}"
+    # Construct URLs from frontend origin
+    frontend_origin = data.get('frontendOrigin', '').rstrip('/')
+    read_url = f"{frontend_origin}/event?token={read_token}"
+    write_url = f"{frontend_origin}/edit?token={edit_token}"
 
     # Send confirmation email
     from flask import render_template
@@ -158,9 +157,8 @@ def register_participant():
 
     # Notify all
     from flask import render_template
-    host = request.host
-    protocol = request.scheme
-    url = f"{protocol}://{host}/event?token={token}"
+    frontend_origin = data.get('frontendOrigin', '').rstrip('/')
+    url = f"{frontend_origin}/event?token={token}"
 
     notify_all(
         event.id,
