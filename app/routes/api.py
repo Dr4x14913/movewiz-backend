@@ -87,6 +87,8 @@ def get_event():
     data = event.to_dict()
     data.pop('readToken', None)
     data.pop('editToken', None)
+    if is_edit:
+        data['editableFields'] = ['firstName', 'lastName', 'email', 'eventName', 'datePicker', 'address', 'latitude', 'longitude', 'comments']
     return jsonify({'event': data})
 
 
@@ -102,8 +104,8 @@ def edit_event():
     if not event:
         return jsonify({'error': 'Event not found'}), 404
 
-    # Update fields
-    updates = {k: v for k, v in data.items() if k != 'editToken'}
+    blocked = {'editToken', 'readToken', 'id'}
+    updates = {k: v for k, v in data.items() if k not in blocked}
     for key, value in updates.items():
         if hasattr(event, key):
             setattr(event, key, value)

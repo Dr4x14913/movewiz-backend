@@ -14,8 +14,8 @@ class Config:
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
-    # Rate limiting - no default, only apply to specific endpoints
-    RATELIMIT_DEFAULT = None
+    # Rate limiting - default for all endpoints, stricter limits applied per-endpoint
+    RATELIMIT_DEFAULT = "100 per hour"
 
     # SMTP
     SMTP_HOST = os.environ.get('SMTP_HOST', 'localhost')
