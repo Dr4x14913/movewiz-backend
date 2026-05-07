@@ -1,6 +1,9 @@
 import uuid
 import base64
+from datetime import datetime
+from email_validator import validate_email, EmailNotValidError
 
+from flask import render_template
 from flask import Blueprint, request, jsonify
 from ..extensions import db, limiter
 from ..models import Event, Participant
@@ -9,19 +12,50 @@ from ..services import send_email, notify_all, generate_captcha, store_captcha, 
 api_bp = Blueprint('api', __name__)
 
 
+def _missing_fields(data, required):
+    return [f for f in required if f not in data or data[f] is None or data[f] == '']
+
+
+def _validate_email(value):
+    try:
+        validate_email(value)
+        return True
+    except EmailNotValidError:
+        return False
+
+
+def _validate_date(value):
+    try:
+        datetime.strptime(value, '%Y-%m-%d')
+        return True
+    except (ValueError, TypeError):
+        return False
+
+
 @api_bp.route('/api/createEvent', methods=['POST'])
 @limiter.limit("3 per 15 minutes")
 def create_event():
     data = request.get_json()
+    required = ['firstName', 'lastName', 'email', 'eventName', 'datePicker', 'address', 'latitude', 'longitude', 'comments', 'captchaToken', 'answer', 'frontendOrigin']
+    missing = _missing_fields(data, required)
+    if missing:
+        return jsonify({'error': f'Missing fields: {", ".join(missing)}'}), 400
+
+    email = data.get('email')
+    if not _validate_email(email):
+        return jsonify({'error': 'Invalid email'}), 400
+
+    date_picker = data.get('datePicker')
+    if not _validate_date(date_picker):
+        return jsonify({'error': 'Invalid date format (YYYY-MM-DD)'}), 400
+
     first_name = data.get('firstName')
     last_name = data.get('lastName')
-    email = data.get('email')
     event_name = data.get('eventName')
-    date_picker = data.get('datePicker')
     address = data.get('address')
+    comments = data.get('comments')
     latitude = data.get('latitude')
     longitude = data.get('longitude')
-    comments = data.get('comments')
     answer = data.get('answer')
     captcha_token = data.get('captchaToken')
 
@@ -53,7 +87,6 @@ def create_event():
     write_url = f"{frontend_origin}/edit?token={edit_token}"
 
     # Send confirmation email
-    from flask import render_template
     html = render_template('event_creation.html',
         eventName=event_name,
         eventAddress=address,
@@ -106,6 +139,8 @@ def edit_event():
 
     blocked = {'editToken', 'readToken', 'id'}
     updates = {k: v for k, v in data.items() if k not in blocked}
+    if not updates:
+        return jsonify({'error': 'No fields to update'}), 400
     for key, value in updates.items():
         if hasattr(event, key):
             setattr(event, key, value)
@@ -121,13 +156,24 @@ def edit_event():
 @api_bp.route('/api/registerParticipant', methods=['POST'])
 def register_participant():
     data = request.get_json()
+    required = ['firstName', 'lastName', 'email', 'mode', 'showEmail', 'token', 'registrationDate', 'frontendOrigin']
+    missing = _missing_fields(data, required)
+    if missing:
+        return jsonify({'error': f'Missing fields: {", ".join(missing)}'}), 400
+
+    email = data.get('email')
+    if not _validate_email(email):
+        return jsonify({'error': 'Invalid email'}), 400
+
+    registration_date = data.get('registrationDate')
+    if not _validate_date(registration_date):
+        return jsonify({'error': 'Invalid date format (YYYY-MM-DD)'}), 400
+
     first_name = data.get('firstName')
     last_name = data.get('lastName')
-    email = data.get('email')
     mode = data.get('mode')
     show_email = data.get('showEmail')
     token = data.get('token')
-    registration_date = data.get('registrationDate')
     latitude = data.get('latitude')
     longitude = data.get('longitude')
     comments = data.get('comments')
@@ -158,7 +204,6 @@ def register_participant():
     db.session.commit()
 
     # Notify all
-    from flask import render_template
     frontend_origin = data.get('frontendOrigin', '').rstrip('/')
     url = f"{frontend_origin}/event?token={token}"
 
@@ -200,12 +245,18 @@ def get_participants():
 @limiter.limit("3 per 15 minutes")
 def contact_participant():
     data = request.get_json()
+    required = ['contactToken', 'captchaToken', 'answer', 'senderEmail', 'message']
+    missing = _missing_fields(data, required)
+    if missing:
+        return jsonify({'error': f'Missing fields: {", ".join(missing)}'}), 400
+
+    sender_email = data.get('senderEmail')
+    if not _validate_email(sender_email):
+        return jsonify({'error': 'Invalid email'}), 400
+
     contact_token = data.get('contactToken')
     answer = data.get('answer')
     captcha_token = data.get('captchaToken')
-    sender_email = data.get('senderEmail')
-    message = data.get('message')
-    event_name = data.get('eventName')
 
     if not verify_captcha(captcha_token, answer):
         return jsonify({'error': 'Invalid captcha'}), 401
@@ -214,7 +265,10 @@ def contact_participant():
     if not participant:
         return jsonify({'error': 'Participant not found'}), 404
 
-    from flask import render_template
+    message = data.get('message')
+    if (event := participant.get_event()) is None:
+        return jsonify({'error': f"Event for Participant {participant.firstName} {participant.lastName} Not found"}), 404
+    event_name = event.eventName
     html = render_template('contact.html', senderEmail=sender_email, message=message)
     send_email(participant.email, f"[Movewiz] Contact from event {event_name}", html)
 

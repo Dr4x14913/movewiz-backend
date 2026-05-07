@@ -19,6 +19,14 @@
         .urls { margin: 10px 0; }
         .urls a { display: block; color: #27AE60; margin: 3px 0; }
         #captcha-img { display: block; margin: 10px 0; }
+        .edit-card { background: #fff; border: 1px solid #e0e0e0; border-radius: 6px; padding: 12px 16px; margin-bottom: 8px; display: flex; align-items: center; gap: 14px; transition: box-shadow 0.15s, border-color 0.15s; }
+        .edit-card:hover { box-shadow: 0 2px 6px rgba(0,0,0,0.08); border-color: #27AE60; }
+        .edit-card label { display: inline-flex; align-items: center; gap: 8px; font-weight: 500; color: #333; margin: 0; white-space: nowrap; }
+        .edit-card label input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; accent-color: #1c8046; }
+        .edit-card input[type="text"], .edit-card input[type="number"], .edit-card input[type="email"], .edit-card input[type="date"] { flex: 1; padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; transition: border-color 0.15s; background: #fafafa; }
+        .edit-card input[type="text"]:focus, .edit-card input[type="number"]:focus, .edit-card input[type="email"]:focus, .edit-card input[type="date"]:focus { outline: none; border-color: #27AE60; background: #fff; }
+        .edit-card input[type="text"]:disabled, .edit-card input[type="number"]:disabled, .edit-card input[type="email"]:disabled, .edit-card input[type="date"]:disabled { background: #f0f0f0; color: #aaa; cursor: not-allowed; }
+        .edit-info { display: inline-block; background: #e8f5e9; color: #2e7d32; padding: 2px 8px; border-radius: 3px; font-size: 12px; margin-left: 8px; }
     </style>
 </head>
 <body>
@@ -63,7 +71,9 @@
     <!-- Edit Event -->
     <div class="section">
         <h2>Edit Event</h2>
-        <label>Event Name</label><input id="edit-eventName" value="Updated Event Name">
+        <button onclick="fetchEditFields()">Load Editable Fields</button>
+        <span style="font-size:12px;color:#666;">GET /api/getEvent?token=...&isEdit=true</span>
+        <div id="edit-fields-container" style="margin:10px 0;"></div>
         <button onclick="editEvent()">Update Event</button>
         <span style="font-size:12px;color:#666;">POST /api/editEvent</span>
         <div class="output" id="editevent-output"></div>
@@ -175,12 +185,61 @@
             out('getevent-output', r.data);
         }
 
+        let editableFields = [];
+
+        async function fetchEditFields() {
+            if (!editToken) return out('editevent-output', 'Create an event first');
+            const r = await api('GET', `/api/getEvent?token=${editToken}&isEdit=true`);
+            if (!r.ok || !r.data.event) return out('editevent-output', 'Failed to fetch event');
+            editableFields = r.data.event.editableFields || [];
+            delete r.data.event.editableFields;
+            out('editevent-output', r.data);
+
+            const container = document.getElementById('edit-fields-container');
+            const fieldLabels = {
+                firstName: 'First Name', lastName: 'Last Name', email: 'Email',
+                eventName: 'Event Name', datePicker: 'Date', address: 'Address',
+                latitude: 'Latitude', longitude: 'Longitude', comments: 'Comments'
+            };
+            const fieldInputs = {
+                firstName: 'text', lastName: 'text', email: 'email',
+                eventName: 'text', datePicker: 'date', address: 'text',
+                latitude: 'number', longitude: 'number', comments: 'text'
+            };
+            const defaultValues = {
+                firstName: 'Updated Name', lastName: 'Updated Last', email: 'new@example.com',
+                eventName: 'Updated Event Name', datePicker: '2025-06-01', address: '456 Updated St',
+                latitude: 48.9, longitude: 2.4, comments: 'Updated comments'
+            };
+
+            container.innerHTML = '';
+            editableFields.forEach((field, index) => {
+                const type = fieldInputs[field] || 'text';
+                const label = fieldLabels[field] || field;
+                const inputId = `edit-field-${index}`;
+                const card = document.createElement('div');
+                card.className = 'edit-card';
+                card.innerHTML =
+                    `<label><input type="checkbox" data-field="${field}" checked></label>` +
+                    `<span style="min-width:100px;font-weight:500;color:#444;">${label}</span>` +
+                    `<input type="${type}" id="${inputId}" data-field-input="${field}" value="${defaultValues[field] ?? ''}">`;
+                container.appendChild(card);
+            });
+        }
+
         async function editEvent() {
             if (!editToken) return out('editevent-output', 'Create an event first');
-            const body = {
-                editToken: editToken,
-                eventName: document.getElementById('edit-eventName').value,
-            };
+            const body = { editToken: editToken };
+            const checkboxes = document.querySelectorAll('#edit-fields-container input[type="checkbox"]');
+            checkboxes.forEach(cb => {
+                if (cb.checked) {
+                    const field = cb.getAttribute('data-field');
+                    const inputEl = document.querySelector(`#edit-fields-container input[data-field-input="${field}"]`);
+                    let val = inputEl ? inputEl.value : '';
+                    if (['latitude', 'longitude'].includes(field)) val = parseFloat(val);
+                    body[field] = val;
+                }
+            });
             const r = await api('POST', '/api/editEvent', body);
             out('editevent-output', r.data);
         }

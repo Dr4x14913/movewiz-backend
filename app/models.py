@@ -53,6 +53,9 @@ class Participant(db.Model):
     phoneNumber      = db.Column(db.String(20))
     notifyMe         = db.Column(db.Boolean)
     contactToken     = db.Column(db.String(255), nullable=True)
+    
+    def get_event(self) -> Event | None:
+        return Event.query.filter_by(id=self.eventId).first()
 
     def to_dict(self):
         return {
