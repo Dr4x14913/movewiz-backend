@@ -2,6 +2,9 @@ import os
 
 
 class Config:
+    # CORS
+    CORS_ALLOWED_ORIGINS = os.environ.get('CORS_ALLOWED_ORIGINS', '*')
+
     # Database
     DB_HOST = os.environ.get('DB_HOST', 'localhost')
     DB_PORT = os.environ.get('DB_PORT', '3306')
