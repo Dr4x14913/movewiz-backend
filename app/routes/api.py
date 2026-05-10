@@ -35,6 +35,75 @@ def _validate_date(value):
 @api_bp.route('/api/createEvent', methods=['POST'])
 @limiter.limit("3 per 15 minutes")
 def create_event():
+    """Create a new event
+
+    Requires captcha verification. Sends confirmation email on success.
+
+    ---
+    tags:
+      - Events
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required:
+            - firstName
+            - lastName
+            - email
+            - eventName
+            - datePicker
+            - address
+            - latitude
+            - longitude
+            - comments
+            - captchaToken
+            - answer
+            - frontendOrigin
+          properties:
+            firstName:
+              type: string
+            lastName:
+              type: string
+            email:
+              type: string
+              format: email
+            eventName:
+              type: string
+            datePicker:
+              type: string
+              format: date
+              pattern: '^\\d{4}-\\d{2}-\\d{2}$'
+            address:
+              type: string
+            latitude:
+              type: number
+            longitude:
+              type: number
+            comments:
+              type: string
+            captchaToken:
+              type: string
+            answer:
+              type: string
+            frontendOrigin:
+              type: string
+    responses:
+      201:
+        description: Event created
+        schema:
+          type: object
+          properties:
+            readUrl:
+              type: string
+            writeUrl:
+              type: string
+      400:
+        description: Missing fields / invalid email / invalid date
+      401:
+        description: Invalid captcha
+    """
     data = request.get_json()
     required = ['firstName', 'lastName', 'email', 'eventName', 'datePicker', 'address', 'latitude', 'longitude', 'comments', 'captchaToken', 'answer', 'frontendOrigin']
     missing = _missing_fields(data, required)
@@ -104,6 +173,38 @@ def create_event():
 
 @api_bp.route('/api/getEvent', methods=['GET'])
 def get_event():
+    """Get event by token
+
+    Returns event data. Use isEdit=true for edit access. Tokens are stripped from response.
+
+    ---
+    tags:
+      - Events
+    parameters:
+      - in: query
+        name: token
+        required: true
+        type: string
+        description: Read or edit token
+      - in: query
+        name: isEdit
+        required: false
+        type: boolean
+        default: false
+        description: Request edit access
+    responses:
+      200:
+        description: Event found
+        schema:
+          type: object
+          properties:
+            event:
+              $ref: '#/definitions/Event'
+      400:
+        description: Token missing
+      404:
+        description: Event not found
+    """
     token = request.args.get('token')
     is_edit = request.args.get('isEdit', 'false').lower() == 'true'
 
@@ -127,6 +228,50 @@ def get_event():
 
 @api_bp.route('/api/editEvent', methods=['POST'])
 def edit_event():
+    """Update event fields
+
+    Requires valid edit token. Blocked fields (id, readToken, editToken) cannot be modified.
+
+    ---
+    tags:
+      - Events
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required:
+            - editToken
+          properties:
+            editToken:
+              type: string
+            firstName:
+              type: string
+            lastName:
+              type: string
+            email:
+              type: string
+            eventName:
+              type: string
+            datePicker:
+              type: string
+            address:
+              type: string
+            latitude:
+              type: number
+            longitude:
+              type: number
+            comments:
+              type: string
+    responses:
+      200:
+        description: Event updated
+      400:
+        description: Edit token missing / no fields to update
+      404:
+        description: Event not found
+    """
     data = request.get_json()
     edit_token = data.get('editToken')
 
@@ -155,6 +300,64 @@ def edit_event():
 
 @api_bp.route('/api/registerParticipant', methods=['POST'])
 def register_participant():
+    """Register a participant for an event
+
+    Requires valid event read token. Notifies all existing participants on success.
+
+    ---
+    tags:
+      - Participants
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required:
+            - firstName
+            - lastName
+            - email
+            - mode
+            - showEmail
+            - token
+            - registrationDate
+            - frontendOrigin
+          properties:
+            firstName:
+              type: string
+            lastName:
+              type: string
+            email:
+              type: string
+              format: email
+            mode:
+              type: string
+            showEmail:
+              type: boolean
+            token:
+              type: string
+              description: Event read token
+            registrationDate:
+              type: string
+              format: date
+            latitude:
+              type: number
+            longitude:
+              type: number
+            comments:
+              type: string
+            phoneNumber:
+              type: string
+            notifyMe:
+              type: boolean
+    responses:
+      200:
+        description: Participant registered
+      400:
+        description: Missing fields / invalid email / invalid date
+      404:
+        description: Event not found
+    """
     data = request.get_json()
     required = ['firstName', 'lastName', 'email', 'mode', 'showEmail', 'token', 'registrationDate', 'frontendOrigin']
     missing = _missing_fields(data, required)
@@ -231,6 +434,29 @@ def register_participant():
 
 @api_bp.route('/api/getParticipants', methods=['GET'])
 def get_participants():
+    """List participants for an event
+
+    Returns all participants registered for the event identified by the read token.
+
+    ---
+    tags:
+      - Participants
+    parameters:
+      - in: query
+        name: token
+        required: true
+        type: string
+        description: Event read token
+    responses:
+      200:
+        description: List of participants
+        schema:
+          type: array
+          items:
+            $ref: '#/definitions/Participant'
+      404:
+        description: Event not found
+    """
     token = request.args.get('token')
 
     event = Event.query.filter_by(readToken=token).first()
@@ -244,6 +470,52 @@ def get_participants():
 @api_bp.route('/api/contactParticipant', methods=['POST'])
 @limiter.limit("3 per 15 minutes")
 def contact_participant():
+    """Contact a participant
+
+    Sends a message to the participant via email. Requires captcha verification.
+
+    ---
+    tags:
+      - Contact
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required:
+            - contactToken
+            - captchaToken
+            - answer
+            - senderEmail
+            - message
+          properties:
+            contactToken:
+              type: string
+            captchaToken:
+              type: string
+            answer:
+              type: string
+            senderEmail:
+              type: string
+              format: email
+            message:
+              type: string
+    responses:
+      200:
+        description: Message sent
+        schema:
+          type: object
+          properties:
+            success:
+              type: boolean
+      400:
+        description: Missing fields / invalid email
+      401:
+        description: Invalid captcha
+      404:
+        description: Participant or event not found
+    """
     data = request.get_json()
     required = ['contactToken', 'captchaToken', 'answer', 'senderEmail', 'message']
     missing = _missing_fields(data, required)
@@ -277,6 +549,25 @@ def contact_participant():
 
 @api_bp.route('/generate-captcha', methods=['GET'])
 def captcha():
+    """Generate captcha image
+
+    Returns a base64-encoded captcha image and a token for later verification.
+
+    ---
+    tags:
+      - Captcha
+    responses:
+      200:
+        description: Captcha generated
+        schema:
+          type: object
+          properties:
+            token:
+              type: string
+            image:
+              type: string
+              description: Base64-encoded image
+    """
     captcha_image, captcha_text = generate_captcha()
     token = store_captcha(captcha_text)
     image_base64 = base64.b64encode(captcha_image.getvalue()).decode()

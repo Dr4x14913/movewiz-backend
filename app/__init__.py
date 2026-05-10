@@ -1,5 +1,6 @@
 from flask import Flask
 from flask_cors import CORS
+from flasgger import Swagger
 from .config import Config
 from .extensions import db, limiter
 
@@ -17,6 +18,16 @@ def create_app():
         CORS(app)
     else:
         CORS(app, origins=Config.CORS_ALLOWED_ORIGINS.split(','))
+
+    # Swagger
+    swagger = Swagger(app, template={
+        'swagger': '2.0',
+        'info': {
+            'title': 'Movewiz API',
+            'version': '1.0.0',
+            'description': 'API for managing events and participants',
+        },
+    })
 
     # Register blueprints
     from .routes.api import api_bp
