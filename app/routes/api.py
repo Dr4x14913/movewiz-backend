@@ -467,7 +467,7 @@ def get_participants():
         name: token
         required: true
         type: string
-        description: Event read token
+        description: Event read or edit token
     responses:
       200:
         description: List of participants
@@ -509,7 +509,9 @@ def get_participants():
     """
     token = request.args.get('token')
 
-    event = Event.query.filter_by(readToken=token).first()
+    event = Event.query.filter(
+        (Event.readToken == token) | (Event.editToken == token)
+    ).first()
     if not event:
         return jsonify({'error': 'Event not found or invalid token'}), 404
 
