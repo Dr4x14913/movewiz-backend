@@ -199,7 +199,28 @@ def get_event():
           type: object
           properties:
             event:
-              $ref: '#/definitions/Event'
+              type: object
+              properties:
+                id:
+                  type: integer
+                firstName:
+                  type: string
+                lastName:
+                  type: string
+                email:
+                  type: string
+                eventName:
+                  type: string
+                datePicker:
+                  type: string
+                address:
+                  type: string
+                latitude:
+                  type: number
+                longitude:
+                  type: number
+                comments:
+                  type: string
       400:
         description: Token missing
       404:
@@ -453,7 +474,36 @@ def get_participants():
         schema:
           type: array
           items:
-            $ref: '#/definitions/Participant'
+            type: object
+            properties:
+              id:
+                type: integer
+              firstName:
+                type: string
+              lastName:
+                type: string
+              email:
+                type: string
+              showEmail:
+                type: boolean
+              registrationDate:
+                type: string
+              mode:
+                type: string
+              latitude:
+                type: number
+              longitude:
+                type: number
+              eventId:
+                type: integer
+              comments:
+                type: string
+              phoneNumber:
+                type: string
+              notifyMe:
+                type: boolean
+              contactToken:
+                type: string
       404:
         description: Event not found
     """
