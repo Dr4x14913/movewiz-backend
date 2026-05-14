@@ -60,7 +60,8 @@ def create_event():
             - comments
             - captchaToken
             - answer
-            - frontendOrigin
+            - eventPageUrl
+            - editPageUrl
           properties:
             firstName:
               type: string
@@ -87,8 +88,12 @@ def create_event():
               type: string
             answer:
               type: string
-            frontendOrigin:
+            eventPageUrl:
               type: string
+              description: Base URL for the event (read) page, e.g. https://example.com/event
+            editPageUrl:
+              type: string
+              description: Base URL for the edit (write) page, e.g. https://example.com/edit
     responses:
       201:
         description: Event created
@@ -105,7 +110,7 @@ def create_event():
         description: Invalid captcha
     """
     data = request.get_json()
-    required = ['firstName', 'lastName', 'email', 'eventName', 'datePicker', 'address', 'latitude', 'longitude', 'comments', 'captchaToken', 'answer', 'frontendOrigin']
+    required = ['firstName', 'lastName', 'email', 'eventName', 'datePicker', 'address', 'latitude', 'longitude', 'comments', 'captchaToken', 'answer', 'eventPageUrl', 'editPageUrl']
     missing = _missing_fields(data, required)
     if missing:
         return jsonify({'error': f'Missing fields: {", ".join(missing)}'}), 400
@@ -150,10 +155,9 @@ def create_event():
     db.session.add(event)
     db.session.commit()
 
-    # Construct URLs from frontend origin
-    frontend_origin = data.get('frontendOrigin', '').rstrip('/')
-    read_url = f"{frontend_origin}/event?token={read_token}"
-    write_url = f"{frontend_origin}/edit?token={edit_token}"
+    # Construct URLs from frontend-provided base URLs
+    read_url = f"{data.get('eventPageUrl')}?token={read_token}"
+    write_url = f"{data.get('editPageUrl')}?token={edit_token}"
 
     # Send confirmation email
     html = render_template('event_creation.html',
@@ -342,7 +346,7 @@ def register_participant():
             - showEmail
             - token
             - registrationDate
-            - frontendOrigin
+            - eventPageUrl
           properties:
             firstName:
               type: string
@@ -371,6 +375,9 @@ def register_participant():
               type: string
             notifyMe:
               type: boolean
+            eventPageUrl:
+              type: string
+              description: Base URL for the event (read) page, e.g. https://example.com/event. Backend appends ?token=...
     responses:
       200:
         description: Participant registered
@@ -380,7 +387,7 @@ def register_participant():
         description: Event not found
     """
     data = request.get_json()
-    required = ['firstName', 'lastName', 'email', 'mode', 'showEmail', 'token', 'registrationDate', 'frontendOrigin']
+    required = ['firstName', 'lastName', 'email', 'mode', 'showEmail', 'token', 'registrationDate', 'eventPageUrl']
     missing = _missing_fields(data, required)
     if missing:
         return jsonify({'error': f'Missing fields: {", ".join(missing)}'}), 400
@@ -428,8 +435,7 @@ def register_participant():
     db.session.commit()
 
     # Notify all
-    frontend_origin = data.get('frontendOrigin', '').rstrip('/')
-    url = f"{frontend_origin}/event?token={token}"
+    url = f"{data.get('eventPageUrl')}?token={token}"
 
     notify_all(
         event.id,
