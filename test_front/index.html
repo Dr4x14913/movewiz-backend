@@ -33,8 +33,10 @@
     <h1>Movewiz Test Client</h1>
     <label>API Endpoint</label>
     <input id="api-endpoint" value="http://localhost:3033" style="max-width: 400px;">
-    <label>Frontend Origin</label>
-    <input id="frontend-origin" value="http://localhost:3000" style="max-width: 400px;">
+    <label>Event Page URL</label>
+    <input id="event-page-url" value="http://localhost:3000/event" style="max-width: 400px;">
+    <label>Edit Page URL</label>
+    <input id="edit-page-url" value="http://localhost:3000/edit" style="max-width: 400px;">
 
     <!-- Create Event -->
     <div class="section">
@@ -85,9 +87,8 @@
         <label>First Name</label><input id="reg-firstName" value="Jane">
         <label>Last Name</label><input id="reg-lastName" value="Smith">
         <label>Email</label><input id="reg-email" value="jane@example.com">
-        <label>Mode</label><input id="reg-mode" value="walking">
+        <label>Mode</label><select id="reg-mode"><option value="driver">driver</option><option value="passenger">passenger</option></select>
         <label>Show Email</label><select id="reg-showEmail"><option value="true">true</option><option value="false">false</option></select>
-        <label>Registration Date</label><input id="reg-registrationDate" value="2025-05-01">
         <label>Latitude</label><input id="reg-latitude" type="number" step="any" value="48.8600">
         <label>Longitude</label><input id="reg-longitude" type="number" step="any" value="2.3600">
         <label>Comments</label><textarea id="reg-comments">Interested!</textarea>
@@ -157,7 +158,8 @@
                 comments: document.getElementById('create-comments').value,
                 captchaToken: createCaptchaToken,
                 answer: document.getElementById('create-answer').value,
-                frontendOrigin: document.getElementById('frontend-origin').value.replace(/\/+$/, ''),
+                eventPageUrl: document.getElementById('event-page-url').value.replace(/\/+$/, ''),
+                editPageUrl: document.getElementById('edit-page-url').value.replace(/\/+$/, ''),
             };
             try {
                 const res = await fetch(getAPI() + '/api/createEvent', {
@@ -253,13 +255,12 @@
                 mode: document.getElementById('reg-mode').value,
                 showEmail: document.getElementById('reg-showEmail').value === 'true',
                 token: readToken,
-                registrationDate: document.getElementById('reg-registrationDate').value,
                 latitude: parseFloat(document.getElementById('reg-latitude').value),
                 longitude: parseFloat(document.getElementById('reg-longitude').value),
                 comments: document.getElementById('reg-comments').value,
                 phoneNumber: document.getElementById('reg-phoneNumber').value,
                 notifyMe: document.getElementById('reg-notifyMe').value === 'true',
-                frontendOrigin: document.getElementById('frontend-origin').value.replace(/\/+$/, ''),
+                eventPageUrl: document.getElementById('event-page-url').value.replace(/\/+$/, ''),
             };
             const r = await api('POST', '/api/registerParticipant', body);
             out('register-output', r.data);

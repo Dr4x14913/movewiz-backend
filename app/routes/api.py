@@ -180,6 +180,7 @@ def get_event():
     """Get event by token
 
     Returns event data. Use isEdit=true for edit access. Tokens are stripped from response.
+    When isEdit=true, response includes an additional "editableFields" array listing modifiable fields.
 
     ---
     tags:
@@ -345,7 +346,6 @@ def register_participant():
             - mode
             - showEmail
             - token
-            - registrationDate
             - eventPageUrl
           properties:
             firstName:
@@ -357,14 +357,13 @@ def register_participant():
               format: email
             mode:
               type: string
+              enum: [driver, passenger]
+              description: Role of the participant (driver or passenger)
             showEmail:
               type: boolean
             token:
               type: string
               description: Event read token
-            registrationDate:
-              type: string
-              format: date
             latitude:
               type: number
             longitude:
@@ -387,7 +386,7 @@ def register_participant():
         description: Event not found
     """
     data = request.get_json()
-    required = ['firstName', 'lastName', 'email', 'mode', 'showEmail', 'token', 'registrationDate', 'eventPageUrl']
+    required = ['firstName', 'lastName', 'email', 'mode', 'showEmail', 'token', 'eventPageUrl']
     missing = _missing_fields(data, required)
     if missing:
         return jsonify({'error': f'Missing fields: {", ".join(missing)}'}), 400
@@ -396,13 +395,14 @@ def register_participant():
     if not _validate_email(email):
         return jsonify({'error': 'Invalid email'}), 400
 
-    registration_date = data.get('registrationDate')
-    if not _validate_date(registration_date):
-        return jsonify({'error': 'Invalid date format (YYYY-MM-DD)'}), 400
+    registration_date = datetime.now().strftime('%Y-%m-%d')
 
     first_name = data.get('firstName')
     last_name = data.get('lastName')
     mode = data.get('mode')
+    if mode not in ('driver', 'passenger'):
+        return jsonify({'error': "Invalid mode. Must be 'driver' or 'passenger'"}), 400
+
     show_email = data.get('showEmail')
     token = data.get('token')
     latitude = data.get('latitude')
