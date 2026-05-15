@@ -347,6 +347,7 @@ def register_participant():
             - showEmail
             - token
             - eventPageUrl
+            - editParticipantPageUrl
           properties:
             firstName:
               type: string
@@ -377,6 +378,9 @@ def register_participant():
             eventPageUrl:
               type: string
               description: Base URL for the event (read) page, e.g. https://example.com/event. Backend appends ?token=...
+            editParticipantPageUrl:
+              type: string
+              description: Base URL for the edit participant page, e.g. https://example.com/edit-participant. Backend appends ?token=...
     responses:
       200:
         description: Participant registered
@@ -386,7 +390,7 @@ def register_participant():
         description: Event not found
     """
     data = request.get_json()
-    required = ['firstName', 'lastName', 'email', 'mode', 'showEmail', 'token', 'eventPageUrl']
+    required = ['firstName', 'lastName', 'email', 'mode', 'showEmail', 'token', 'eventPageUrl', 'editParticipantPageUrl']
     missing = _missing_fields(data, required)
     if missing:
         return jsonify({'error': f'Missing fields: {", ".join(missing)}'}), 400
@@ -416,6 +420,7 @@ def register_participant():
         return jsonify({'error': 'Event not found'}), 404
 
     contact_token = str(uuid.uuid4())
+    edit_token = str(uuid.uuid4())
     participant = Participant(
         firstName=first_name,
         lastName=last_name,
@@ -430,6 +435,7 @@ def register_participant():
         phoneNumber=phone_number,
         notifyMe=notify_me,
         contactToken=contact_token,
+        editToken=edit_token,
     )
     db.session.add(participant)
     db.session.commit()
@@ -453,8 +459,22 @@ def register_participant():
             'phoneNumber': phone_number,
             'url': url,
         },
-        'new_participant.html'
+        'new_participant.html',
+        exclude_id=participant.id
     )
+
+    # Send confirmation email to the new participant
+    edit_url = f"{data.get('editParticipantPageUrl')}?token={edit_token}"
+    html = render_template('participant_registered.html',
+        firstName=first_name,
+        lastName=last_name,
+        eventName=event.eventName,
+        eventDate=event.datePicker,
+        eventAddress=event.address,
+        mode=mode,
+        editUrl=edit_url,
+    )
+    send_email(email, "[Movewiz] Registration Confirmed", html)
 
     return jsonify({'message': 'Participant registered successfully'}), 200
 

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Registration Confirmed</title>
+</head>
+<body style="font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; max-width: 600px; margin: auto; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);">
+
+  <!-- Header -->
+  <div style="background-color: #1c8046; padding: 20px; text-align: center; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);">
+    <h1 style="margin: 0; color: white;">Registration Confirmed</h1>
+  </div>
+
+  <!-- Body -->
+  <div style="padding: 20px; background-color: #fff; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);">
+
+    <p style="font-size: 16px;">Hello {{ firstName }} {{ lastName }},</p>
+    <p style="font-size: 16px;">You have successfully registered for the following event:</p>
+
+    <h2 style="color: #27AE60;">Event Details</h2>
+
+    <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+      <tr>
+        <td style="padding: 8px; border-bottom: 1px solid #ddd; width: 30%;"><strong>Event Name:</strong></td>
+        <td style="padding: 8px; border-bottom: 1px solid #ddd;">{{ eventName }}</td>
+      </tr>
+      <tr>
+        <td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Date:</strong></td>
+        <td style="padding: 8px; border-bottom: 1px solid #ddd;">{{ eventDate }}</td>
+      </tr>
+      <tr>
+        <td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Address:</strong></td>
+        <td style="padding: 8px; border-bottom: 1px solid #ddd;">{{ eventAddress }}</td>
+      </tr>
+      <tr>
+        <td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Your Role:</strong></td>
+        <td style="padding: 8px; border-bottom: 1px solid #ddd;">{{ mode }}</td>
+      </tr>
+    </table>
+
+    <h2 style="color: #27AE60;">Edit Your Registration</h2>
+    <p style="font-size: 16px;">You can edit your registration details using the link below:</p>
+    <p><a href="{{ editUrl }}" style="color: #27AE60; text-decoration: none;">{{ editUrl }}</a></p>
+  </div>
+
+  <!-- Footer -->
+  <div style="background-color: #1c8046; text-align: center; padding: 15px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);">
+    <p style="margin: 0; color: white;">See you at the event!</p>
+  </div>
+
+</body>
+</html>

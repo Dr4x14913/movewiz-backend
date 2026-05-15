@@ -37,6 +37,8 @@
     <input id="event-page-url" value="http://localhost:3000/event" style="max-width: 400px;">
     <label>Edit Page URL</label>
     <input id="edit-page-url" value="http://localhost:3000/edit" style="max-width: 400px;">
+    <label>Edit Participant Page URL</label>
+    <input id="edit-participant-page-url" value="http://localhost:3000/edit-participant" style="max-width: 400px;">
 
     <!-- Create Event -->
     <div class="section">
@@ -261,6 +263,7 @@
                 phoneNumber: document.getElementById('reg-phoneNumber').value,
                 notifyMe: document.getElementById('reg-notifyMe').value === 'true',
                 eventPageUrl: document.getElementById('event-page-url').value.replace(/\/+$/, ''),
+                editParticipantPageUrl: document.getElementById('edit-participant-page-url').value.replace(/\/+$/, ''),
             };
             const r = await api('POST', '/api/registerParticipant', body);
             out('register-output', r.data);

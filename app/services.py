@@ -50,10 +50,13 @@ def send_email(to, subject, html):
         print("Sending email successful", flush=True)
 
 
-def notify_all(event_id, owner_email, subject, data, template):
+def notify_all(event_id, owner_email, subject, data, template, exclude_id=None):
     participants = Participant.query.filter_by(
         notifyMe=True, eventId=event_id
-    ).all()
+    )
+    if exclude_id is not None:
+        participants = participants.filter(Participant.id != exclude_id)
+    participants = participants.all()
 
     html = render_template(template, **data)
 
