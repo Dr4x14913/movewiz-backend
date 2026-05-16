@@ -479,6 +479,83 @@ def register_participant():
     return jsonify({'message': 'Participant registered successfully'}), 200
 
 
+@api_bp.route('/api/editParticipant', methods=['POST'])
+def edit_participant():
+    """Update participant fields
+
+    Requires valid edit token generated during participant registration.
+
+    ---
+    tags:
+      - Participants
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required:
+            - editToken
+          properties:
+            editToken:
+              type: string
+            firstName:
+              type: string
+            lastName:
+              type: string
+            email:
+              type: string
+              format: email
+            mode:
+              type: string
+              enum: [driver, passenger]
+            showEmail:
+              type: boolean
+            latitude:
+              type: number
+            longitude:
+              type: number
+            comments:
+              type: string
+            phoneNumber:
+              type: string
+            notifyMe:
+              type: boolean
+    responses:
+      200:
+        description: Participant updated
+      400:
+        description: Edit token missing / no fields to update
+      404:
+        description: Participant not found
+    """
+    data = request.get_json()
+    edit_token = data.get('editToken')
+
+    if not edit_token:
+        return jsonify({'error': 'Edit token is required'}), 400
+
+    participant = Participant.query.filter_by(editToken=edit_token).first()
+    if not participant:
+        return jsonify({'error': 'Participant not found'}), 404
+
+    blocked = {'editToken', 'contactToken', 'id', 'eventId', 'registrationDate'}
+    updates = {k: v for k, v in data.items() if k not in blocked}
+    if not updates:
+        return jsonify({'error': 'No fields to update'}), 400
+
+    for key, value in updates.items():
+        if hasattr(participant, key):
+            setattr(participant, key, value)
+
+    db.session.commit()
+
+    data_out = participant.to_dict()
+    data_out.pop('editToken', None)
+    data_out.pop('contactToken', None)
+    return jsonify({'participant': data_out})
+
+
 @api_bp.route('/api/getParticipants', methods=['GET'])
 def get_participants():
     """List participants for an event
