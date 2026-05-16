@@ -14,7 +14,7 @@ services:
       - $PWD:/app
 
   db:
-    image: mariadb:11
+    image: mariadb:10
     restart: always
     environment:
       - MARIADB_USER=user
