@@ -539,7 +539,7 @@ def edit_participant():
     if not participant:
         return jsonify({'error': 'Participant not found'}), 404
 
-    blocked = {'editToken', 'contactToken', 'id', 'eventId', 'registrationDate'}
+    blocked = {'editToken', 'contactToken', 'id', 'eventId', 'registrationDate', 'email'}
     updates = {k: v for k, v in data.items() if k not in blocked}
     if not updates:
         return jsonify({'error': 'No fields to update'}), 400
@@ -554,6 +554,49 @@ def edit_participant():
     data_out.pop('editToken', None)
     data_out.pop('contactToken', None)
     return jsonify({'participant': data_out})
+
+
+@api_bp.route('/api/getParticipant', methods=['GET'])
+def get_participant():
+    """Get participant by edit token
+
+    Returns participant data with tokens stripped.
+
+    ---
+    tags:
+      - Participants
+    parameters:
+      - in: query
+        name: token
+        required: true
+        type: string
+        description: Participant edit token
+    responses:
+      200:
+        description: Participant found
+        schema:
+          type: object
+          properties:
+            participant:
+              type: object
+      400:
+        description: Token missing
+      404:
+        description: Participant not found
+    """
+    token = request.args.get('token')
+
+    if not token:
+        return jsonify({'error': 'Token is required'}), 400
+
+    participant = Participant.query.filter_by(editToken=token).first()
+    if not participant:
+        return jsonify({'error': 'Participant not found'}), 404
+
+    data = participant.to_dict(force_show_email=True)
+    data.pop('editToken', None)
+    data.pop('contactToken', None)
+    return jsonify({'participant': data})
 
 
 @api_bp.route('/api/getParticipants', methods=['GET'])

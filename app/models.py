@@ -31,7 +31,6 @@ class Event(db.Model):
             'latitude': float(self.latitude) if self.latitude else None,
             'longitude': float(self.longitude) if self.longitude else None,
             'readToken': self.readToken,
-            'editToken': self.editToken,
             'comments': self.comments,
         }
 
@@ -58,12 +57,11 @@ class Participant(db.Model):
     def get_event(self) -> Event | None:
         return Event.query.filter_by(id=self.eventId).first()
 
-    def to_dict(self):
+    def to_dict(self, force_show_email=False):
         return {
-            'id': self.id,
             'firstName': self.firstName,
             'lastName': self.lastName,
-            'email': self.email if self.showEmail else "****",
+            'email': self.email if self.showEmail or force_show_email else "****",
             'showEmail': self.showEmail,
             'registrationDate': self.registrationDate,
             'mode': self.mode,
@@ -74,5 +72,4 @@ class Participant(db.Model):
             'phoneNumber': self.phoneNumber,
             'notifyMe': self.notifyMe,
             'contactToken': self.contactToken,
-            'editToken': self.editToken,
         }
