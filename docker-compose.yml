@@ -10,8 +10,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    volumes:
-      - $PWD:/app
+    #volumes:
+    #  - $PWD:/app
 
   db:
     image: mariadb:10
