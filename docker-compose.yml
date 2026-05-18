@@ -24,11 +24,10 @@ services:
     volumes:
       - mariadb_data:/var/lib/mysql/
     healthcheck:
-      test: ["CMD-SHELL", "mariadb -uroot -prootpswd -e 'use my_db;'"]
-      interval: 15s
+      test: ["CMD", "healthcheck.sh", "--suicide-on-timeout", "--innodb-support"]
+      interval: 10s
       timeout: 5s
       retries: 3
-      start_period: 30s
 
 volumes:
   mariadb_data:
