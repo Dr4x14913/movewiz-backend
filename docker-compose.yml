@@ -9,7 +9,7 @@ services:
     restart: unless-stopped
     depends_on:
       db:
-        condition: service_healthy
+        condition: service_started
     #volumes:
     #  - $PWD:/app
 
@@ -23,11 +23,6 @@ services:
       - MARIADB_ROOT_PASSWORD=rootpswd
     volumes:
       - mariadb_data:/var/lib/mysql/
-    healthcheck:
-      test: ["CMD", "healthcheck.sh", "--suicide-on-timeout", "--innodb-support"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
 
 volumes:
   mariadb_data:
