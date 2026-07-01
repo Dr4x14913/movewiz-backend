@@ -773,4 +773,8 @@ def captcha():
     captcha_image, captcha_text = generate_captcha()
     token = store_captcha(captcha_text)
     image_base64 = base64.b64encode(captcha_image.getvalue()).decode()
-    return jsonify({'token': token, 'image': image_base64})
+    response = jsonify({'token': token, 'image': image_base64})
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
