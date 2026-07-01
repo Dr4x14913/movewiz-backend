@@ -33,7 +33,7 @@ def _validate_date(value):
 
 
 @api_bp.route('/api/createEvent', methods=['POST'])
-@limiter.limit("3 per 15 minutes")
+@limiter.limit("15 per 10 minutes")
 def create_event():
     """Create a new event
 
@@ -670,7 +670,7 @@ def get_participants():
 
 
 @api_bp.route('/api/contactParticipant', methods=['POST'])
-@limiter.limit("3 per 15 minutes")
+@limiter.limit("15 per 10 minutes")
 def contact_participant():
     """Contact a participant
 
