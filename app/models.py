@@ -5,9 +5,9 @@ class Event(db.Model):
     __tablename__ = 'events'
 
     id         = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
-    firstName  = db.Column(db.String(255), nullable=False)
-    lastName   = db.Column(db.String(255), nullable=False)
-    email      = db.Column(db.String(255), nullable=False)
+    firstName  = db.Column(db.String(255), nullable=True)
+    lastName   = db.Column(db.String(255), nullable=True)
+    email      = db.Column(db.String(255), nullable=True)
     eventName  = db.Column(db.String(255), nullable=False)
     datePicker = db.Column(db.String(128), nullable=False)
     address    = db.Column(db.Text, nullable=False)
@@ -15,7 +15,7 @@ class Event(db.Model):
     longitude  = db.Column(db.Numeric(10, 8), nullable=False)
     readToken  = db.Column(db.String(255), nullable=False)
     editToken  = db.Column(db.String(255), nullable=False)
-    comments   = db.Column(db.Text, nullable=False)
+    comments   = db.Column(db.Text, nullable=True)
 
     participants = db.relationship('Participant', backref='event', lazy=True)
 

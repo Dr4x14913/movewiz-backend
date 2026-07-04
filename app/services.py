@@ -60,12 +60,14 @@ def notify_all(event_id, owner_email, subject, data, template, exclude_id=None):
 
     html = render_template(template, **data)
 
-    send_email(owner_email, subject, html)
+    if owner_email:
+        send_email(owner_email, subject, html)
 
     for participant in participants:
         send_email(participant.email, subject, html)
 
-    print(f'Emails sent to {len(participants)} participants and owner.', flush=True)
+    owner_count = 1 if owner_email else 0
+    print(f'Emails sent to {len(participants)} participants and {owner_count} owner.', flush=True)
 
 
 def generate_captcha():

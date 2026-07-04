@@ -49,15 +49,11 @@ def create_event():
         schema:
           type: object
           required:
-            - firstName
-            - lastName
-            - email
             - eventName
             - datePicker
             - address
             - latitude
             - longitude
-            - comments
             - captchaToken
             - answer
             - eventPageUrl
@@ -110,13 +106,13 @@ def create_event():
         description: Invalid captcha
     """
     data = request.get_json()
-    required = ['firstName', 'lastName', 'email', 'eventName', 'datePicker', 'address', 'latitude', 'longitude', 'comments', 'captchaToken', 'answer', 'eventPageUrl', 'editPageUrl']
+    required = ['eventName', 'datePicker', 'address', 'latitude', 'longitude', 'captchaToken', 'answer', 'eventPageUrl', 'editPageUrl']
     missing = _missing_fields(data, required)
     if missing:
         return jsonify({'error': f'Missing fields: {", ".join(missing)}'}), 400
 
     email = data.get('email')
-    if not _validate_email(email):
+    if email and not _validate_email(email):
         return jsonify({'error': 'Invalid email'}), 400
 
     date_picker = data.get('datePicker')
@@ -159,18 +155,19 @@ def create_event():
     read_url = f"{data.get('eventPageUrl')}?token={read_token}"
     write_url = f"{data.get('editPageUrl')}?token={edit_token}"
 
-    # Send confirmation email
-    html = render_template('event_creation.html',
-        eventName=event_name,
-        eventAddress=address,
-        latitude=latitude,
-        longitude=longitude,
-        eventDate=date_picker,
-        eventComments=comments,
-        publicUrl=read_url,
-        privateUrl=write_url,
-    )
-    send_email(email, "[Movewiz] New Event Created", html)
+    # Send confirmation email (only if an email was provided)
+    if email:
+        html = render_template('event_creation.html',
+            eventName=event_name,
+            eventAddress=address,
+            latitude=latitude,
+            longitude=longitude,
+            eventDate=date_picker,
+            eventComments=comments,
+            publicUrl=read_url,
+            privateUrl=write_url,
+        )
+        send_email(email, "[Movewiz] New Event Created", html)
 
     return jsonify({'readUrl': read_url, 'writeUrl': write_url}), 201
 

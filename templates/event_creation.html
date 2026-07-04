@@ -47,8 +47,10 @@
       </tr>
     </table>
 
+    {% if eventComments %}
     <h2 style="color: #27AE60;">Comments</h2>
     <div style="background-color: #f9f9f9; border-radius: 4px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); white-space: pre-wrap;">{{ eventComments }}</div>
+    {% endif %}
   </div>
 
   <!-- Footer -->
