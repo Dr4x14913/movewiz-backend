@@ -347,7 +347,6 @@ def register_participant():
             - editParticipantPageUrl
             - latitude
             - longitude
-            - phoneNumber
             - notifyMe
           properties:
             firstName:
@@ -391,7 +390,7 @@ def register_participant():
         description: Event not found
     """
     data = request.get_json()
-    required = ['firstName', 'lastName', 'email', 'mode', 'showEmail', 'token', 'eventPageUrl', 'editParticipantPageUrl', 'latitude', 'longitude', 'phoneNumber', 'notifyMe']
+    required = ['firstName', 'lastName', 'email', 'mode', 'showEmail', 'token', 'eventPageUrl', 'editParticipantPageUrl', 'latitude', 'longitude', 'notifyMe']
     missing = _missing_fields(data, required)
     if missing:
         return jsonify({'error': f'Missing fields: {", ".join(missing)}'}), 400
@@ -413,7 +412,7 @@ def register_participant():
     latitude = data.get('latitude')
     longitude = data.get('longitude')
     comments = data.get('comments')
-    phone_number = data.get('phoneNumber')
+    phone_number = data.get('phoneNumber', '')
     notify_me = data.get('notifyMe')
 
     event = Event.query.filter_by(readToken=token).first()
