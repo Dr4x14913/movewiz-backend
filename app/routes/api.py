@@ -1,5 +1,4 @@
 import uuid
-import base64
 from datetime import datetime
 from email_validator import validate_email, EmailNotValidError
 
@@ -7,7 +6,7 @@ from flask import render_template
 from flask import Blueprint, request, jsonify
 from ..extensions import db, limiter
 from ..models import Event, Participant
-from ..services import send_email, notify_all, generate_captcha, store_captcha, verify_captcha
+from ..services import send_email, notify_all, verify_turnstile
 
 api_bp = Blueprint('api', __name__)
 
@@ -37,7 +36,7 @@ def _validate_date(value):
 def create_event():
     """Create a new event
 
-    Requires captcha verification. Sends confirmation email on success.
+    Requires Cloudflare Turnstile verification. Sends confirmation email on success.
 
     ---
     tags:
@@ -54,8 +53,7 @@ def create_event():
             - address
             - latitude
             - longitude
-            - captchaToken
-            - answer
+            - turnstileToken
             - eventPageUrl
             - editPageUrl
           properties:
@@ -80,10 +78,9 @@ def create_event():
               type: number
             comments:
               type: string
-            captchaToken:
+            turnstileToken:
               type: string
-            answer:
-              type: string
+              description: Cloudflare Turnstile response token
             eventPageUrl:
               type: string
               description: Base URL for the event (read) page, e.g. https://example.com/event
@@ -103,10 +100,10 @@ def create_event():
       400:
         description: Missing fields / invalid email / invalid date
       401:
-        description: Invalid captcha
+        description: Invalid Turnstile token
     """
     data = request.get_json()
-    required = ['eventName', 'datePicker', 'address', 'latitude', 'longitude', 'captchaToken', 'answer', 'eventPageUrl', 'editPageUrl']
+    required = ['eventName', 'datePicker', 'address', 'latitude', 'longitude', 'eventPageUrl', 'editPageUrl']
     missing = _missing_fields(data, required)
     if missing:
         return jsonify({'error': f'Missing fields: {", ".join(missing)}'}), 400
@@ -126,11 +123,10 @@ def create_event():
     comments = data.get('comments')
     latitude = data.get('latitude')
     longitude = data.get('longitude')
-    answer = data.get('answer')
-    captcha_token = data.get('captchaToken')
+    turnstile_token = data.get('turnstileToken')
 
-    if not verify_captcha(captcha_token, answer):
-        return jsonify({'error': 'Invalid captcha'}), 401
+    if not verify_turnstile(turnstile_token):
+        return jsonify({'error': 'Invalid or missing Turnstile token'}), 401
 
     read_token = str(uuid.uuid4())
     edit_token = str(uuid.uuid4())
@@ -670,7 +666,7 @@ def get_participants():
 def contact_participant():
     """Contact a participant
 
-    Sends a message to the participant via email. Requires captcha verification.
+    Sends a message to the participant via email. Requires Cloudflare Turnstile verification.
 
     ---
     tags:
@@ -683,17 +679,15 @@ def contact_participant():
           type: object
           required:
             - contactToken
-            - captchaToken
-            - answer
+            - turnstileToken
             - senderEmail
             - message
           properties:
             contactToken:
               type: string
-            captchaToken:
+            turnstileToken:
               type: string
-            answer:
-              type: string
+              description: Cloudflare Turnstile response token
             senderEmail:
               type: string
               format: email
@@ -710,12 +704,12 @@ def contact_participant():
       400:
         description: Missing fields / invalid email
       401:
-        description: Invalid captcha
+        description: Invalid Turnstile token
       404:
         description: Participant or event not found
     """
     data = request.get_json()
-    required = ['contactToken', 'captchaToken', 'answer', 'senderEmail', 'message']
+    required = ['contactToken', 'senderEmail', 'message']
     missing = _missing_fields(data, required)
     if missing:
         return jsonify({'error': f'Missing fields: {", ".join(missing)}'}), 400
@@ -725,11 +719,10 @@ def contact_participant():
         return jsonify({'error': 'Invalid email'}), 400
 
     contact_token = data.get('contactToken')
-    answer = data.get('answer')
-    captcha_token = data.get('captchaToken')
+    turnstile_token = data.get('turnstileToken')
 
-    if not verify_captcha(captcha_token, answer):
-        return jsonify({'error': 'Invalid captcha'}), 401
+    if not verify_turnstile(turnstile_token):
+        return jsonify({'error': 'Invalid or missing Turnstile token'}), 401
 
     participant = Participant.query.filter_by(contactToken=contact_token).first()
     if not participant:
@@ -745,32 +738,3 @@ def contact_participant():
     return jsonify({'success': True})
 
 
-@api_bp.route('/generate-captcha', methods=['GET'])
-def captcha():
-    """Generate captcha image
-
-    Returns a base64-encoded captcha image and a token for later verification.
-
-    ---
-    tags:
-      - Captcha
-    responses:
-      200:
-        description: Captcha generated
-        schema:
-          type: object
-          properties:
-            token:
-              type: string
-            image:
-              type: string
-              description: Base64-encoded image
-    """
-    captcha_image, captcha_text = generate_captcha()
-    token = store_captcha(captcha_text)
-    image_base64 = base64.b64encode(captcha_image.getvalue()).decode()
-    response = jsonify({'token': token, 'image': image_base64})
-    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate'
-    response.headers['Pragma'] = 'no-cache'
-    response.headers['Expires'] = '0'
-    return response

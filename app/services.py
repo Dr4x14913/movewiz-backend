@@ -1,27 +1,46 @@
+import json
 import smtplib
-import uuid
+import urllib.parse
+import urllib.request
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from captcha.image import ImageCaptcha
 
 from flask import render_template
-from .extensions import db
 from .models import Event, Participant
 from .config import Config
 
-# In-memory captcha store: {token: captcha_text}
-_captcha_store = {}
+TURNSTILE_VERIFY_URL = 'https://challenges.cloudflare.com/turnstile/v0/siteverify'
 
 
-def store_captcha(captcha_text):
-    token = uuid.uuid4().hex
-    _captcha_store[token] = captcha_text
-    return token
+def verify_turnstile(token):
+    """Verify a Cloudflare Turnstile response token server-side.
 
+    When no secret key is configured (local development), verification is
+    skipped and the request is allowed.
+    """
+    if not Config.TURNSTILE_SECRET_KEY:
+        print('WARNING: TURNSTILE_SECRET_KEY not set - Turnstile verification skipped', flush=True)
+        return True
+    if not token:
+        return False
 
-def verify_captcha(token, answer):
-    stored = _captcha_store.pop(token, None)
-    return stored == answer and stored is not None
+    payload = urllib.parse.urlencode({
+        'secret': Config.TURNSTILE_SECRET_KEY,
+        'response': token,
+    }).encode()
+    try:
+        req = urllib.request.Request(
+            TURNSTILE_VERIFY_URL,
+            data=payload,
+            headers={'Content-Type': 'application/x-www-form-urlencoded'},
+        )
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            result = json.loads(resp.read())
+    except Exception as e:
+        print(f'Error verifying Turnstile token: {e}', flush=True)
+        return False
+
+    return bool(result.get('success'))
 
 
 def send_email(to, subject, html):
@@ -68,14 +87,3 @@ def notify_all(event_id, owner_email, subject, data, template, exclude_id=None):
 
     owner_count = 1 if owner_email else 0
     print(f'Emails sent to {len(participants)} participants and {owner_count} owner.', flush=True)
-
-
-def generate_captcha():
-    image = ImageCaptcha(width=150, height=50)
-    data = uuid.uuid4().hex[:5].replace('0', '').replace('o', '').replace('1', '').replace('i', '')[:5]
-    # Ensure we have 5 characters
-    while len(data) < 5:
-        data += uuid.uuid4().hex[-1]
-
-    captcha_image = image.generate(data)
-    return captcha_image, data

@@ -28,3 +28,6 @@ class Config:
     SMTP_USER = os.environ.get('SMTP_USER', '')
     SMTP_PASS = os.environ.get('SMTP_PASS', '')
     SMTP_FROM = os.environ.get('SMTP_FROM', 'no-reply@movewiz.com')
+
+    # Cloudflare Turnstile (leave empty to skip verification, e.g. local dev)
+    TURNSTILE_SECRET_KEY = os.environ.get('TURNSTILE_SECRET_KEY', '')

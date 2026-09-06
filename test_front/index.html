@@ -18,7 +18,6 @@
         .output { background: #f9f9f9; border: 1px solid #ddd; padding: 10px; margin-top: 10px; border-radius: 4px; white-space: pre-wrap; font-size: 13px; max-height: 300px; overflow-y: auto; }
         .urls { margin: 10px 0; }
         .urls a { display: block; color: #27AE60; margin: 3px 0; }
-        #captcha-img { display: block; margin: 10px 0; }
         .edit-card { background: #fff; border: 1px solid #e0e0e0; border-radius: 6px; padding: 12px 16px; margin-bottom: 8px; display: flex; align-items: center; gap: 14px; transition: box-shadow 0.15s, border-color 0.15s; }
         .edit-card:hover { box-shadow: 0 2px 6px rgba(0,0,0,0.08); border-color: #27AE60; }
         .edit-card label { display: inline-flex; align-items: center; gap: 8px; font-weight: 500; color: #333; margin: 0; white-space: nowrap; }
@@ -52,10 +51,8 @@
         <label>Latitude</label><input id="create-latitude" type="number" step="any" value="48.8566">
         <label>Longitude</label><input id="create-longitude" type="number" step="any" value="2.3522">
         <label>Comments</label><textarea id="create-comments">Test comments</textarea>
-        <label>Captcha</label>
-        <img id="create-captcha-img" src="" alt="captcha" onclick="loadCreateCaptcha()">
-        <br><button onclick="loadCreateCaptcha()">Refresh Captcha</button>
-        <label>Captcha Answer</label><input id="create-answer">
+        <label>Turnstile Token</label>
+        <input id="create-turnstileToken" placeholder="Leave empty locally (verification skipped when no secret key is configured)">
         <button onclick="createNewEvent()">Create Event</button>
         <span style="font-size:12px;color:#666;">POST /api/createEvent</span>
         <div class="urls" id="event-urls"></div>
@@ -115,11 +112,8 @@
         <label>Contact Token</label><input id="contact-contactToken" placeholder="Paste participant contactToken here">
         <label>Your Email</label><input id="contact-senderEmail" value="me@example.com">
         <label>Message</label><textarea id="contact-message">Hello, is the event still on?</textarea>
-        <label>Captcha</label>
-        <img id="captcha-img" src="" alt="captcha" onclick="loadCaptcha()">
-        <span style="font-size:12px;color:#666;">GET /generate-captcha</span>
-        <br><button onclick="loadCaptcha()">Refresh Captcha</button>
-        <label>Captcha Answer</label><input id="contact-answer">
+        <label>Turnstile Token</label>
+        <input id="contact-turnstileToken" placeholder="Leave empty locally (verification skipped when no secret key is configured)">
         <button onclick="contactParticipant()">Send Message</button>
         <span style="font-size:12px;color:#666;">POST /api/contactParticipant</span>
         <div class="output" id="contact-output"></div>
@@ -147,7 +141,6 @@
         async function createNewEvent() {
             const outputEl = document.getElementById('create-output');
             outputEl.textContent = 'Sending...';
-            if (!createCaptchaToken) return outputEl.textContent = 'Load captcha first';
             const body = {
                 firstName: document.getElementById('create-firstName').value,
                 lastName: document.getElementById('create-lastName').value,
@@ -158,8 +151,7 @@
                 latitude: parseFloat(document.getElementById('create-latitude').value),
                 longitude: parseFloat(document.getElementById('create-longitude').value),
                 comments: document.getElementById('create-comments').value,
-                captchaToken: createCaptchaToken,
-                answer: document.getElementById('create-answer').value,
+                turnstileToken: document.getElementById('create-turnstileToken').value,
                 eventPageUrl: document.getElementById('event-page-url').value.replace(/\/+$/, ''),
                 editPageUrl: document.getElementById('edit-page-url').value.replace(/\/+$/, ''),
             };
@@ -275,39 +267,12 @@
             out('participants-output', r.data);
         }
 
-        let contactCaptchaToken = '';
-        let createCaptchaToken = '';
-
-        async function loadCaptcha() {
-            try {
-                const res = await fetch(getAPI() + '/generate-captcha');
-                const data = await res.json();
-                contactCaptchaToken = data.token;
-                document.getElementById('captcha-img').src = 'data:image/png;base64,' + data.image;
-            } catch (e) {
-                console.error('Failed to load captcha:', e);
-            }
-        }
-
-        async function loadCreateCaptcha() {
-            try {
-                const res = await fetch(getAPI() + '/generate-captcha');
-                const data = await res.json();
-                createCaptchaToken = data.token;
-                document.getElementById('create-captcha-img').src = 'data:image/png;base64,' + data.image;
-            } catch (e) {
-                console.error('Failed to load captcha:', e);
-            }
-        }
-
         async function contactParticipant() {
             const contactToken = document.getElementById('contact-contactToken').value.trim();
             if (!contactToken) return out('contact-output', 'Enter a contact token');
-            if (!contactCaptchaToken) return out('contact-output', 'Load captcha first');
             const body = {
                 contactToken: contactToken,
-                captchaToken: contactCaptchaToken,
-                answer: document.getElementById('contact-answer').value,
+                turnstileToken: document.getElementById('contact-turnstileToken').value,
                 senderEmail: document.getElementById('contact-senderEmail').value,
                 message: document.getElementById('contact-message').value,
                 eventName: 'Test Event',
@@ -316,9 +281,6 @@
             out('contact-output', r.data);
         }
 
-        // Load captchas on start
-        loadCaptcha();
-        loadCreateCaptcha();
     </script>
 </body>
 </html>
