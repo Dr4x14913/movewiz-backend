@@ -47,6 +47,7 @@ class Participant(db.Model):
     mode             = db.Column(db.String(255), nullable=False)
     latitude         = db.Column(db.Numeric(10, 8), nullable=False)
     longitude        = db.Column(db.Numeric(10, 8), nullable=False)
+    address          = db.Column(db.Text, nullable=True)
     eventId          = db.Column(db.BigInteger, db.ForeignKey('events.id'), nullable=False)
     comments         = db.Column(db.Text, nullable=True)
     phoneNumber      = db.Column(db.String(20), nullable=False)
@@ -67,6 +68,7 @@ class Participant(db.Model):
             'mode': self.mode,
             'latitude': float(self.latitude) if self.latitude else None,
             'longitude': float(self.longitude) if self.longitude else None,
+            'address': self.address,
             'eventId': self.eventId,
             'comments': self.comments,
             'phoneNumber': self.phoneNumber,

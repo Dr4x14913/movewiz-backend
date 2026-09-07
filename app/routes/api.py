@@ -365,6 +365,9 @@ def register_participant():
               type: number
             longitude:
               type: number
+            address:
+              type: string
+              description: Display address resolved by the frontend (geocoding stays in the browser). Stored and returned as-is.
             comments:
               type: string
             phoneNumber:
@@ -407,6 +410,7 @@ def register_participant():
     token = data.get('token')
     latitude = data.get('latitude')
     longitude = data.get('longitude')
+    address = data.get('address') or ''
     comments = data.get('comments')
     phone_number = data.get('phoneNumber', '')
     notify_me = data.get('notifyMe')
@@ -427,6 +431,7 @@ def register_participant():
         eventId=event.id,
         latitude=latitude,
         longitude=longitude,
+        address=address,
         comments=comments,
         phoneNumber=phone_number,
         notifyMe=notify_me,
@@ -511,6 +516,9 @@ def edit_participant():
               type: number
             longitude:
               type: number
+            address:
+              type: string
+              description: Display address resolved by the frontend (geocoding stays in the browser). Stored and returned as-is.
             comments:
               type: string
             phoneNumber:
@@ -636,6 +644,8 @@ def get_participants():
                 type: number
               longitude:
                 type: number
+              address:
+                type: string
               eventId:
                 type: integer
               comments:
