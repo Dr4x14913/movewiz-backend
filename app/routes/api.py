@@ -7,6 +7,7 @@ from flask import Blueprint, request, jsonify
 from ..extensions import db, limiter
 from ..models import Event, Participant
 from ..services import send_email, notify_all, verify_turnstile
+from ..email_locales import strings, subject, normalize_lang, get_locale
 
 api_bp = Blueprint('api', __name__)
 
@@ -152,8 +153,11 @@ def create_event():
     write_url = f"{data.get('editPageUrl')}?token={edit_token}"
 
     # Send confirmation email (only if an email was provided)
+    lang = normalize_lang(data.get('language'))
     if email:
         html = render_template('event_creation.html',
+            t=strings(lang, 'event_creation'),
+            lang=lang,
             eventName=event_name,
             eventAddress=address,
             latitude=latitude,
@@ -163,7 +167,7 @@ def create_event():
             publicUrl=read_url,
             privateUrl=write_url,
         )
-        send_email(email, "[Movewiz] New Event Created", html)
+        send_email(email, subject(lang, 'eventCreated'), html)
 
     return jsonify({'readUrl': read_url, 'writeUrl': write_url}), 201
 
@@ -441,19 +445,25 @@ def register_participant():
     db.session.add(participant)
     db.session.commit()
 
-    # Notify all
+    # Notify all (uses the language chosen by the person who just registered)
+    lang = normalize_lang(data.get('language'))
+    mode_label = get_locale(lang)['mode'][mode]
     url = f"{data.get('eventPageUrl')}?token={token}"
+    notify_strings = strings(lang, 'new_participant')
 
     notify_all(
         event.id,
         event.email,
-        "[Movewiz] A new participant joined the event!",
+        subject(lang, 'newParticipant'),
         {
+            't': notify_strings,
+            'lang': lang,
+            'intro': notify_strings['intro'].format(firstName=first_name),
             'eventName': event.eventName,
             'firstName': first_name,
             'lastName': last_name,
-            'mode': mode,
-            'email': email if show_email else "Hidden email",
+            'mode': mode_label,
+            'email': email if show_email else notify_strings['hiddenEmail'],
             'latitude': latitude,
             'longitude': longitude,
             'comments': comments,
@@ -465,17 +475,20 @@ def register_participant():
     )
 
     # Send confirmation email to the new participant
+    registered_strings = strings(lang, 'participant_registered')
     edit_url = f"{data.get('editParticipantPageUrl')}?token={edit_token}"
     html = render_template('participant_registered.html',
-        firstName=first_name,
-        lastName=last_name,
+        t=registered_strings,
+        lang=lang,
+        greeting=registered_strings['greeting'].format(firstName=first_name, lastName=last_name),
+        intro=registered_strings['intro'],
         eventName=event.eventName,
         eventDate=event.datePicker,
         eventAddress=event.address,
-        mode=mode,
+        role=mode_label,
         editUrl=edit_url,
     )
-    send_email(email, "[Movewiz] Registration Confirmed", html)
+    send_email(email, subject(lang, 'registrationConfirmed'), html)
 
     return jsonify({'message': 'Participant registered successfully'}), 200
 
@@ -742,8 +755,16 @@ def contact_participant():
     if (event := participant.get_event()) is None:
         return jsonify({'error': f"Event for Participant {participant.firstName} {participant.lastName} Not found"}), 404
     event_name = event.eventName
-    html = render_template('contact.html', senderEmail=sender_email, message=message)
-    send_email(participant.email, f"[Movewiz] Contact from event {event_name}", html)
+    lang = normalize_lang(data.get('language'))
+    contact_strings = strings(lang, 'contact')
+    html = render_template('contact.html',
+        t=contact_strings,
+        lang=lang,
+        intro=contact_strings['intro'],
+        senderEmail=sender_email,
+        message=message,
+    )
+    send_email(participant.email, subject(lang, 'newMessage').format(event_name=event_name), html)
 
     return jsonify({'success': True})
 
