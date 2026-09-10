@@ -155,13 +155,13 @@ def create_event():
     # Send confirmation email (only if an email was provided)
     lang = normalize_lang(data.get('language'))
     if email:
+        creation_strings = strings(lang, 'event_creation')
         html = render_template('event_creation.html',
-            t=strings(lang, 'event_creation'),
+            t=creation_strings,
             lang=lang,
+            intro=creation_strings['intro'].format(eventName=event_name),
             eventName=event_name,
             eventAddress=address,
-            latitude=latitude,
-            longitude=longitude,
             eventDate=date_picker,
             eventComments=comments,
             publicUrl=read_url,
@@ -177,7 +177,8 @@ def get_event():
     """Get event by token
 
     Returns event data. Use isEdit=true for edit access. Tokens are stripped from response.
-    When isEdit=true, response includes an additional "editableFields" array listing modifiable fields.
+    When isEdit=true, response includes an additional "editableFields" array listing modifiable fields
+    and a "readUrl" field with the URL of the event's read page (origin + /event?token=<read_token>).
 
     ---
     tags:
@@ -223,6 +224,14 @@ def get_event():
                   type: number
                 comments:
                   type: string
+                editableFields:
+                  type: array
+                  items:
+                    type: string
+                  description: Present only when isEdit=true
+                readUrl:
+                  type: string
+                  description: Present only when isEdit=true
       400:
         description: Token missing
       404:
@@ -246,6 +255,7 @@ def get_event():
     data.pop('editToken', None)
     if is_edit:
         data['editableFields'] = ['firstName', 'lastName', 'email', 'eventName', 'datePicker', 'address', 'latitude', 'longitude', 'comments']
+        data['readUrl'] = f"{request.host_url}event?token={event.readToken}"
     return jsonify({'event': data})
 
 
@@ -458,14 +468,12 @@ def register_participant():
         {
             't': notify_strings,
             'lang': lang,
-            'intro': notify_strings['intro'].format(firstName=first_name),
-            'eventName': event.eventName,
+            'intro': notify_strings['intro'].format(
+                firstName=first_name, lastName=last_name, eventName=event.eventName),
             'firstName': first_name,
             'lastName': last_name,
             'mode': mode_label,
             'email': email if show_email else notify_strings['hiddenEmail'],
-            'latitude': latitude,
-            'longitude': longitude,
             'comments': comments,
             'phoneNumber': phone_number,
             'url': url,
